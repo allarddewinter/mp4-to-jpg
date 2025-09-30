@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MP4 → JPG | Ministry of Silly Frames</title>
+<style>
+  :root{
+    --bg:#fafafa;
+    --panel:#ffffff;
+    --ink:#111;
+    --muted:#6b7280;
+    --line:#e5e7eb;
+    --accent:#0f766e;
+    --accent-2:#2563eb;
+    --danger:#b91c1c;
+    --ok:#15803d;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    --radius:14px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0d1117; --panel:#0f141c; --ink:#f2f5f9; --muted:#94a3b8; --line:#1f2937;
+      --accent:#22c55e; --accent-2:#60a5fa; --danger:#ef4444; --ok:#34d399;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height:100%; background:var(--bg); color:var(--ink); }
+  body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans"; }
+  .wrap{ max-width:1100px; margin:28px auto 48px; padding:0 16px; }
+  header{
+    display:grid; gap:8px; align-items:center; grid-template-columns: auto 1fr;
+    border-bottom:1px dashed var(--line); padding-bottom:12px; margin-bottom:18px;
+  }
+  pre.ascii{
+    margin:0; font-family:var(--mono); line-height:1.05; color:var(--muted);
+  }
+  .title{ font-size: clamp(1.4rem, 1.2rem + 1.2vw, 2rem); margin:0; }
+  .sub{ color:var(--muted); margin:2px 0 0; }
+
+  .card{ background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:16px; }
+  .grid{ display:grid; gap:12px; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); }
+  fieldset{ border:1px solid var(--line); border-radius:12px; padding:12px; min-width:0; }
+  legend{ color:var(--muted); font-size:0.95rem; padding:0 6px; }
+  label{ font-size:0.92rem; color:var(--muted); display:block; margin-bottom:6px; }
+  input[type="number"], input[type="text"], input[type="file"], textarea, select{
+    width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:10px; background:#fff0; color:var(--ink);
+  }
+  input[type="range"]{ width:100%; }
+  .row{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+  .btnbar{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  button{
+    appearance:none; border:1px solid var(--line); background:#fff0; color:var(--ink);
+    padding:10px 14px; border-radius:12px; cursor:pointer; transition:transform .15s ease, background .15s ease, border-color .15s ease;
+  }
+  button:hover{ transform:translateY(-1px); border-color:#cbd5e1; }
+  .primary{ background:linear-gradient(180deg,#e6f6ff,#f8fbff); border-color:#c7e2ff; }
+  .accent{ background:linear-gradient(180deg,#ecfff8,#f6fffb); border-color:#bdf2dd; }
+  .danger{ background:linear-gradient(180deg,#fff1f2,#fff7f7); border-color:#fecaca; }
+  .muted{ opacity:.9; }
+  .stat{ color:var(--muted); font-size:.92rem; }
+
+  .drop{
+    border:2px dashed var(--line); border-radius:12px; padding:14px; text-align:center; color:var(--muted);
+  }
+  .drop.hover{ border-color:var(--accent-2); color:var(--accent-2); }
+
+  .progress{ height:10px; border:1px solid var(--line); border-radius:999px; overflow:hidden; }
+  .bar{ height:100%; width:0%; background:linear-gradient(90deg,var(--accent-2),var(--accent)); transition:width .2s ease; }
+
+  .gallery{ margin-top:16px; display:grid; gap:12px; grid-template-columns: repeat(auto-fill, minmax(160px,1fr)); }
+  figure{ border:1px solid var(--line); border-radius:12px; padding:8px; margin:0; display:flex; flex-direction:column; gap:8px; }
+  figure img{ width:100%; height:auto; border-radius:8px; background:#f6f7f9; }
+  figcaption{ display:flex; gap:8px; justify-content:space-between; color:var(--muted); font-size:.85rem; flex-wrap:wrap;}
+  a.small{ font-size:.85rem; text-decoration:none; color:var(--accent-2); }
+
+  .pill{ padding:2px 8px; border-radius:999px; border:1px solid var(--line); background:#f7f7f7; color:#475569; font-size:.8rem; }
+  .hint{ font-size:.85rem; color:var(--muted); }
+
+  details.help > summary{ cursor:pointer; list-style:none; color:var(--accent-2); }
+  details.help > summary::-webkit-details-marker{ display:none; }
+  details.help{ border:1px dashed var(--line); border-radius:10px; padding:8px 10px; }
+  kbd{ font-family:var(--mono); border:1px solid var(--line); border-bottom-width:2px; border-radius:6px; padding:1px 6px; background:#f9fafb; }
+
+  .kv{ display:grid; grid-template-columns: auto 1fr; gap:6px 10px; align-items:center; }
+  .kv div:nth-child(odd){ color:var(--muted); }
+
+  .hidden{ display:none !important; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <pre class="ascii" aria-hidden="true">
+   __  __  ____   ____   ____         _         _                 _
+  |  \/  |/ __ \ / __ \ / __ \  _    | |  ___  | |__   ___   ___ | |_
+| |\/| | |  | | |  | | |  | |( )   | | / _ \ | '_ \ / _ \ / _ \| __|
+  | |  | | |__| | |__| | |__| |/ _ \ | || (_) || |_) | (_) | (_) | |_
+|_|  |_|\____/ \____/ \____/  (_)  |_| \___/ |_.__/ \___/ \___/ \__|
+               The Ministry of Silly Frames™ (bring a shrubbery)
+      </pre>
+      <div>
+        <h1 class="title">MP4 → JPG (In‑Browser Frame Extractor)</h1>
+        <p class="sub">Minimal, fast, private. Choose interval / FPS / timestamps, and extract frames as JPEGs—no uploads.</p>
+      </div>
+    </header>
+
+    <div class="card">
+      <div class="grid">
+        <div>
+          <label for="videoFile">Video file</label>
+          <input id="videoFile" type="file" accept="video/*" />
+          <div id="fileInfo" class="stat" style="margin-top:6px;"></div>
+
+          <div id="dropZone" class="drop" style="margin-top:8px;" aria-label="Drag and drop area">
+            Drop video here or press <kbd>Enter</kbd> on the file input ↑
+          </div>
+
+          <details class="help" style="margin-top:10px;">
+            <summary>Help: FPS vs Step vs Timestamps</summary>
+            <div class="hint" style="margin-top:6px;">
+              <ul>
+                <li><b>Every N seconds (Step)</b>: capture a frame every <i>N</i> seconds (e.g., 0.5 → every half second).</li>
+                <li><b>By FPS</b>: capture <i>F</i> frames per second. Example: <b>2 FPS</b> means <b>2 frames each second</b>, i.e. <b>every 0.500 s</b>.</li>
+                <li><b>Specific timestamps</b>: capture exactly at the times you list (e.g., <code>0, 1.25, 5</code>).</li>
+              </ul>
+              <p class="hint">Note: Browsers often seek to the nearest keyframe, so ultra-precise per-frame capture is not guaranteed for some MP4s.</p>
+            </div>
+          </details>
+        </div>
+
+        <fieldset>
+          <legend>Range (seconds)</legend>
+          <div class="row">
+            <div>
+              <label for="startTime">Start</label>
+              <input id="startTime" type="number" step="0.001" min="0" value="0" />
+            </div>
+            <div>
+              <label for="endTime">End</label>
+              <input id="endTime" type="number" step="0.001" min="0" value="0" />
+            </div>
+          </div>
+          <div class="btnbar" style="margin-top:8px;">
+            <button id="fullRangeBtn" type="button" class="muted">Use full duration</button>
+            <span id="durationStat" class="stat"></span>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Extraction mode</legend>
+
+          <div style="display:flex; gap:12px; flex-wrap:wrap;">
+            <label><input type="radio" name="mode" value="interval" checked /> Every N seconds</label>
+            <label><input type="radio" name="mode" value="fps" /> By FPS</label>
+            <label><input type="radio" name="mode" value="timestamps" /> Specific timestamps</label>
+          </div>
+
+          <div id="panel-interval" style="margin-top:8px;">
+            <div class="row">
+              <div>
+                <label for="stepSeconds">Step (seconds)</label>
+                <input id="stepSeconds" type="number" step="0.001" min="0.001" value="0.5" />
+              </div>
+              <div>
+                <label for="maxFrames">Max frames</label>
+                <input id="maxFrames" type="number" min="1" max="5000" value="500" />
+              </div>
+            </div>
+            <div class="hint" id="intervalExplain" style="margin-top:6px;"></div>
+          </div>
+
+          <div id="panel-fps" class="hidden" style="margin-top:8px;">
+            <div class="row">
+              <div>
+                <label for="fps">FPS (frames per second)</label>
+                <input id="fps" type="number" step="0.001" min="0.001" value="2" />
+              </div>
+              <div>
+                <label class="hint">Conversion</label>
+                <div id="fpsExplain" class="pill">2 FPS → every 0.500 s</div>
+              </div>
+            </div>
+            <div class="hint" id="fpsEstimate" style="margin-top:6px;"></div>
+          </div>
+
+          <div id="panel-timestamps" class="hidden" style="margin-top:8px;">
+            <label for="timestamps" class="hint">Comma or space-separated seconds (e.g., <code>0, 1.2, 2, 3.5</code>)</label>
+            <textarea id="timestamps" rows="3" placeholder="0, 1.5, 2.0"></textarea>
+            <div id="tsCount" class="hint" style="margin-top:6px;"></div>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Output</legend>
+          <div class="row">
+            <div>
+              <label for="scale">Scale (%)</label>
+              <input id="scale" type="number" min="5" max="400" step="1" value="100" />
+            </div>
+            <div>
+              <label for="quality">JPEG quality <span id="qualityVal" class="pill">0.92</span></label>
+              <input id="quality" type="range" min="0.2" max="1" step="0.02" value="0.92" />
+            </div>
+          </div>
+          <div style="margin-top:8px;">
+            <label><input type="checkbox" id="autoDownload" /> Auto-download each frame</label>
+          </div>
+        </fieldset>
+      </div>
+
+      <div class="btnbar" style="margin-top:14px;">
+        <button id="extractBtn" class="primary"><span aria-hidden="true">🪄</span> Extract frames</button>
+        <button id="cancelBtn" class="danger" type="button" disabled>Cancel</button>
+        <button id="clearBtn" type="button" class="muted">Clear results</button>
+        <button id="zipBtn" class="accent" type="button" disabled>Download all as ZIP</button>
+        <span id="status" class="stat"></span>
+      </div>
+
+      <div class="progress" style="margin-top:10px;"><div id="bar" class="bar"></div></div>
+      <div id="meta" class="kv" style="margin-top:12px;"></div>
+
+      <div id="gallery" class="gallery"></div>
+
+      <!-- Hidden workers -->
+      <video id="video" class="hidden" crossorigin="anonymous" preload="auto" playsinline muted></video>
+      <canvas id="canvas" class="hidden"></canvas>
+    </div>
+
+    <div class="hint" style="margin-top:12px;">
+      <details class="help">
+        <summary>Technical notes (seek accuracy, platforms, shortcuts)</summary>
+        <ul style="margin-top:6px;">
+          <li><b>Keyframes:</b> Many MP4s seek to the nearest keyframe → exact times can snap. Larger steps/lower FPS can help.</li>
+          <li><b>iOS/Safari:</b> Click <i>Extract</i> and keep the tab foregrounded. Playback is “primed” silently where possible.</li>
+          <li><b>Memory:</b> Hundreds of frames can be heavy. Use <i>Max frames</i>.</li>
+          <li><b>Shortcuts:</b> <kbd>E</kbd> extract, <kbd>C</kbd> cancel, <kbd>Z</kbd> zip, <kbd>R</kbd> clear.</li>
+          <li><b>Theme:</b> Respectful nod to Monty Python; no parrots were harmed.</li>
+        </ul>
+      </details>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+
+  // Elements
+  const elFile = $('videoFile');
+  const elDrop = $('dropZone');
+  const elInfo = $('fileInfo');
+  const elVideo = $('video');
+  const elCanvas = $('canvas');
+  const ctx = elCanvas.getContext('2d', { willReadFrequently: true });
+
+  const elStart = $('startTime');
+  const elEnd = $('endTime');
+  const elFullRange = $('fullRangeBtn');
+  const elDurationStat = $('durationStat');
+
+  const elModeRadios = () => document.querySelectorAll('input[name="mode"]');
+  const panelInterval = $('panel-interval');
+  const panelFPS = $('panel-fps');
+  const panelTS = $('panel-timestamps');
+
+  const elStep = $('stepSeconds');
+  const elFPS = $('fps');
+  const elExplainFPS = $('fpsExplain');
+  const elEstimateFPS = $('fpsEstimate');
+  const elExplainInterval = $('intervalExplain');
+
+  const elTimestamps = $('timestamps');
+  const elTSCount = $('tsCount');
+  const elMaxFrames = $('maxFrames');
+
+  const elScale = $('scale');
+  const elQuality = $('quality');
+  const elQualityVal = $('qualityVal');
+  const elAutoDownload = $('autoDownload');
+
+  const elExtract = $('extractBtn');
+  const elCancel = $('cancelBtn');
+  const elClear = $('clearBtn');
+  const elZip = $('zipBtn');
+  const elStatus = $('status');
+  const elBar = $('bar');
+  const elGallery = $('gallery');
+  const elMeta = $('meta');
+
+  let objectUrl = null;
+  let cancelFlag = false;
+  let framesStore = []; // {blob, name, time, url}
+
+  // --- Utilities
+  function fmtTime(t){ return isFinite(t) ? `${t.toFixed(3)}s` : '0.000s'; }
+  function baseName(fileName){
+    if (!fileName) return 'frame';
+    const i = fileName.lastIndexOf('.');
+    return (i>0?fileName.slice(0,i):fileName).replace(/\s+/g,'_');
+  }
+  function setStatus(text){ elStatus.textContent = text || ''; }
+  function setProgress(ratio){ elBar.style.width = `${(Math.max(0, Math.min(1, ratio))*100).toFixed(2)}%`; }
+  function clearResults(){
+    framesStore.forEach(f => URL.revokeObjectURL(f.url));
+    framesStore = []; elGallery.innerHTML=''; setProgress(0); elZip.disabled = true;
+  }
+  function updateQualityLabel(){ elQualityVal.textContent = Number(elQuality.value).toFixed(2); }
+
+  function getMode(){ for (const r of elModeRadios()) if (r.checked) return r.value; return 'interval'; }
+
+  function parseTimestamps(text){
+    const vals = [];
+    (text||'').split(/[\s,]+/g).map(s=>s.trim()).filter(Boolean).forEach(s=>{
+      const v = Number(s); if (isFinite(v)) vals.push(v);
+    });
+    const uniq = Array.from(new Set(vals.map(v=> +v.toFixed(6))));
+    uniq.sort((a,b)=>a-b);
+    return uniq;
+  }
+
+  function makeTimeList({mode, start, end, step, fps, rawTimestamps, maxFrames, duration}){
+    const times = [];
+    const clamp = (t) => Math.min(Math.max(0, t), duration);
+
+    if (mode === 'timestamps'){
+      const list = parseTimestamps(rawTimestamps);
+      list.forEach(t => { if (t>=0 && t<=duration) times.push(t); });
+    } else {
+      const s = Math.max(0, start);
+      const e = Math.max(0, end);
+      const lo = Math.min(s,e);
+      const hi = Math.max(s,e);
+      const stepSize = (mode === 'fps') ? (1/Math.max(0.001, fps)) : Math.max(0.001, step);
+      const total = hi - lo;
+      const n = Math.max(1, Math.floor(total/stepSize + 1e-9) + 1);
+      for (let i=0;i<n;i++){
+        const t = clamp(lo + i*stepSize);
+        times.push(t);
+        if (t >= hi - 1e-9) break;
+      }
+      if (times.length===0 || Math.abs(times[times.length-1]-hi)>1e-6) times.push(clamp(hi));
+    }
+    return times.slice(0, Math.max(1, maxFrames|0));
+  }
+
+  function setCanvasSize(scalePct){
+    const vw = elVideo.videoWidth || 0, vh = elVideo.videoHeight || 0;
+    const s = Math.max(0.05, Math.min(4, (scalePct/100)));
+    elCanvas.width = Math.max(1, Math.round(vw*s));
+    elCanvas.height = Math.max(1, Math.round(vh*s));
+  }
+  function drawFrameToCanvas(){ ctx.drawImage(elVideo, 0, 0, elCanvas.width, elCanvas.height); }
+  function canvasToJPEGBlob(quality){
+    return new Promise((resolve, reject)=>{
+      elCanvas.toBlob((blob)=> blob ? resolve(blob) : reject(new Error('Canvas toBlob failed')), 'image/jpeg', quality);
+    });
+  }
+  function triggerDownload(blob, filename){
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; document.body.appendChild(a); a.click();
+    setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); },0);
+  }
+  function addThumbCard({url, name, time}){
+    const fig = document.createElement('figure');
+    const img = document.createElement('img'); img.src=url; img.alt=name; img.loading='lazy';
+    const cap = document.createElement('figcaption');
+    const left = document.createElement('span'); left.textContent = `${name}`;
+    const right = document.createElement('span'); right.innerHTML = `<span class="pill">${fmtTime(time)}</span>`;
+    cap.appendChild(left); cap.appendChild(right);
+    const link = document.createElement('a'); link.href=url; link.download=name; link.textContent='Download'; link.className='small';
+    fig.appendChild(img); fig.appendChild(cap); fig.appendChild(link);
+    elGallery.appendChild(fig);
+  }
+
+  function waitEventOnce(target, event, timeoutMs=60000){
+    return new Promise((resolve, reject)=>{
+      let to=null;
+      const on=()=>{ cleanup(); resolve(); };
+      const onErr=(e)=>{ cleanup(); reject(e instanceof Event ? new Error('Video error') : e); };
+      const cleanup=()=>{ target.removeEventListener(event,on); target.removeEventListener('error',onErr); if(to) clearTimeout(to); };
+      target.addEventListener(event,on,{once:true});
+      target.addEventListener('error',onErr,{once:true});
+      if (timeoutMs){ to=setTimeout(()=>{ cleanup(); reject(new Error(`Timeout waiting for ${event}`)); }, timeoutMs); }
+    });
+  }
+  async function seekTo(timeSec){
+    const t = Math.min(Math.max(0, timeSec), elVideo.duration || timeSec);
+    elVideo.currentTime = t;
+    await waitEventOnce(elVideo, 'seeked', 60000);
+    await new Promise(r => requestAnimationFrame(()=>requestAnimationFrame(r)));
+  }
+  async function primePlayback(){
+    try {
+      elVideo.muted = true;
+      const p = elVideo.play();
+      if (p && typeof p.then === 'function'){ await p; elVideo.pause(); }
+    } catch(e){ /* ignore */ }
+  }
+
+  // --- Dynamic explanations (FPS + estimates)
+  function getDuration(){ return isFinite(elVideo.duration) ? elVideo.duration : 0; }
+  function rangeLoHi(){
+    const s = Number(elStart.value)||0, e=Number(elEnd.value)||0;
+    return [Math.min(s,e), Math.max(s,e)];
+    }
+  function estimateCounts(){
+    const duration = getDuration();
+    const [lo,hi] = rangeLoHi();
+    const span = Math.max(0, Math.min(hi,duration) - Math.max(0,lo));
+    const maxFrames = Math.max(1, Math.min(5000, Number(elMaxFrames.value)||500));
+    const mode = getMode();
+    let before=0, after=0, stepTxt='';
+    if (mode==='fps'){
+      const fps = Math.max(0.001, Number(elFPS.value)||2);
+      const step = 1/fps; stepTxt = `${fps} FPS → every ${step.toFixed(3)} s`;
+      // include endpoints estimation
+      before = (span>0) ? Math.floor(span/step + 1e-9)+1 : 1;
+    } else if (mode==='interval'){
+      const step = Math.max(0.001, Number(elStep.value)||0.5);
+      stepTxt = `Every ${step.toFixed(3)} s`;
+      before = (span>0) ? Math.floor(span/step + 1e-9)+1 : 1;
+    } else {
+      before = parseTimestamps(elTimestamps.value).filter(t=>t>=0 && t<=duration).length;
+      stepTxt = `Exact timestamps (${before})`;
+    }
+    after = Math.min(before, maxFrames);
+    return { stepTxt, before, after, span };
+  }
+
+  function refreshExplainers(){
+    const d = getDuration();
+    elDurationStat.textContent = d ? `Duration: ${d.toFixed(3)} s` : '';
+    const { stepTxt, before, after } = estimateCounts();
+    if (getMode()==='fps'){
+      elExplainFPS.textContent = stepTxt;
+      elEstimateFPS.textContent = `Estimated frames in selected range: ~${before}${after<before?` (capped to ${after})`:''}`;
+    } else if (getMode()==='interval'){
+      elExplainInterval.textContent = `Estimated frames in selected range: ~${before}${after<before?` (capped to ${after})`:''}`;
+    } else {
+      elTSCount.textContent = `Usable timestamps within duration: ${before}`;
+    }
+  }
+
+  function togglePanels(){
+    const mode = getMode();
+    panelInterval.classList.toggle('hidden', mode!=='interval');
+    panelFPS.classList.toggle('hidden', mode!=='fps');
+    panelTS.classList.toggle('hidden', mode!=='timestamps');
+    refreshExplainers();
+  }
+
+  // --- File pick & metadata
+  function onFilePicked(file){
+    if (!file) return;
+    clearResults(); setStatus('');
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    objectUrl = URL.createObjectURL(file);
+    elVideo.src = objectUrl;
+    elInfo.textContent = `${file.name} (${(file.size/1048576).toFixed(2)} MB)`;
+    elVideo.onloadedmetadata = () => {
+      const dur = +elVideo.duration || 0;
+      elStart.value = '0';
+      elEnd.value = dur.toFixed(3);
+      const w = elVideo.videoWidth, h = elVideo.videoHeight;
+      elMeta.innerHTML = `
+        <div>Duration</div><div>${dur ? dur.toFixed(3) + ' s' : 'Unknown'}</div>
+        <div>Resolution</div><div>${w} × ${h}</div>
+        <div>Aspect</div><div>${(w && h) ? (w/h).toFixed(3) : '-'}</div>
+        <div>Status</div><div><span class="pill">metadata loaded</span></div>
+      `;
+      primePlayback();
+      refreshExplainers();
+    };
+    elVideo.onerror = () => setStatus('Could not load video. Is this format supported by your browser?');
+  }
+
+  elFile.addEventListener('change', ()=> onFilePicked(elFile.files && elFile.files[0]));
+  // Drag & drop
+  ;['dragenter','dragover'].forEach(evt => elDrop.addEventListener(evt, e=>{ e.preventDefault(); elDrop.classList.add('hover'); }));
+  ;['dragleave','drop'].forEach(evt => elDrop.addEventListener(evt, e=>{ e.preventDefault(); if(evt==='drop'){ const f=e.dataTransfer.files?.[0]; if(f) onFilePicked(f); } elDrop.classList.remove('hover'); }));
+
+  // Mode handlers
+  elModeRadios().forEach(r => r.addEventListener('change', togglePanels));
+  ;[elStart, elEnd, elStep, elFPS, elTimestamps, elMaxFrames].forEach(el => el.addEventListener('input', refreshExplainers));
+  elFullRange.addEventListener('click', ()=>{ if (isFinite(elVideo.duration)){ elStart.value='0'; elEnd.value=elVideo.duration.toFixed(3); refreshExplainers(); }});
+
+  elQuality.addEventListener('input', updateQualityLabel); updateQualityLabel();
+
+  // --- Extraction
+  async function extractFrames(){
+    const file = (elFile.files && elFile.files[0]) || null;
+    if (!file){ setStatus('Pick a video file first.'); return; }
+    if (!isFinite(elVideo.duration) || elVideo.duration<=0){ setStatus('Video not ready. Please wait for metadata.'); return; }
+
+    const mode = getMode();
+    const duration = +elVideo.duration;
+    const start = Math.max(0, Number(elStart.value) || 0);
+    const end = Math.max(0, Number(elEnd.value) || 0);
+    const step = Math.max(0.001, Number(elStep.value) || 0.5);
+    const fps = Math.max(0.001, Number(elFPS.value) || 2);
+    const rawTimestamps = elTimestamps.value;
+    const maxFrames = Math.max(1, Math.min(5000, Number(elMaxFrames.value) || 500));
+    const scalePct = Math.max(5, Math.min(400, Number(elScale.value) || 100));
+    const quality = Math.max(0.2, Math.min(1, Number(elQuality.value) || 0.92));
+    const autoDownload = !!elAutoDownload.checked;
+
+    const times = makeTimeList({mode, start, end, step, fps, rawTimestamps, maxFrames, duration});
+    if (times.length===0){ setStatus('No timestamps to extract (check inputs).'); return; }
+
+    setCanvasSize(scalePct);
+
+    cancelFlag=false; elExtract.disabled=true; elCancel.disabled=false; setProgress(0);
+    setStatus(`Extracting ${times.length} frame(s)…`);
+
+    const rootName = baseName(file.name);
+    let done=0;
+
+    for (let i=0;i<times.length;i++){
+      if (cancelFlag) break;
+      const t = times[i];
+      try{
+        await seekTo(t);
+        drawFrameToCanvas();
+        const blob = await canvasToJPEGBlob(quality);
+        const indexStr = String(i+1).padStart(String(times.length).length,'0');
+        const fname = `${rootName}_frame_${indexStr}_${t.toFixed(3)}s.jpg`;
+        const url = URL.createObjectURL(blob);
+        framesStore.push({ blob, name: fname, time: t, url });
+        addThumbCard({ url, name: fname, time: t });
+        if (autoDownload){ triggerDownload(blob, fname); await new Promise(r=>setTimeout(r, 120)); }
+        done++; setProgress(done/times.length); setStatus(`Extracted ${done}/${times.length}`);
+      }catch(e){
+        console.warn('Frame extraction error at', t, e);
+        setStatus(`Skipped a frame at ${t.toFixed(3)}s (seek/capture error).`);
+      }
+    }
+
+    elCancel.disabled=true; elExtract.disabled=false; elZip.disabled = framesStore.length===0;
+    if (cancelFlag) setStatus(`Cancelled after ${done}/${times.length} frames.`);
+    else setStatus(`Done. ${done} frame(s) extracted.`);
+  }
+
+  async function downloadAllAsZip(){
+    if (framesStore.length===0) return;
+    setStatus('Preparing ZIP…'); elZip.disabled=true;
+    try{
+      await new Promise((resolve, reject)=>{
+        if (window.JSZip) return resolve();
+        const s=document.createElement('script');
+        s.src='https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
+        s.async=true; s.onload=()=>resolve(); s.onerror=()=>reject(new Error('CDN load failed'));
+        document.head.appendChild(s);
+      });
+      const zip = new window.JSZip();
+      const folder = zip.folder('frames');
+      for (const f of framesStore){ folder.file(f.name, f.blob); }
+      const zipBlob = await zip.generateAsync({ type:'blob', compression:'DEFLATE', compressionOptions:{ level:6 }});
+      const outName = (elFile.files && elFile.files[0]) ? baseName(elFile.files[0].name) + '_frames.zip' : 'frames.zip';
+      triggerDownload(zipBlob, outName);
+      setStatus(`ZIP ready: ${framesStore.length} file(s).`);
+    } catch(e){
+      console.error(e); setStatus('Could not create ZIP (are you offline?). Download frames individually instead.');
+    } finally{
+      elZip.disabled = framesStore.length===0;
+    }
+  }
+
+  // Buttons
+  elExtract.addEventListener('click', (e)=>{ e.preventDefault(); extractFrames(); });
+  elCancel.addEventListener('click', ()=>{ cancelFlag=true; elCancel.disabled=true; setStatus('Cancelling…'); });
+  elClear.addEventListener('click', ()=>{ clearResults(); setStatus('Cleared.'); });
+  elZip.addEventListener('click', downloadAllAsZip);
+
+  // Keyboard shortcuts: E (extract), C (cancel), Z (zip), R (clear)
+  window.addEventListener('keydown', (e)=>{
+    if (['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)) return;
+    if (e.key==='e' || e.key==='E'){ e.preventDefault(); elExtract.click(); }
+    else if (e.key==='c' || e.key==='C'){ e.preventDefault(); elCancel.click(); }
+    else if (e.key==='z' || e.key==='Z'){ e.preventDefault(); if (!elZip.disabled) elZip.click(); }
+    else if (e.key==='r' || e.key==='R'){ e.preventDefault(); elClear.click(); }
+  });
+
+  // Initial
+  function init(){
+    togglePanels();
+    refreshExplainers();
+  }
+  init();
+})();
+</script>
+</body>
+</html>
