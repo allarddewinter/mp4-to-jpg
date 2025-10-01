@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- White-background ASCII-style favicon (monospace text) -->
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="MP4 to JPG favicon">
+  <!-- Ensure white background so ASCII is visible on any tab/theme -->
+  <rect width="100%" height="100%" fill="#ffffff" rx="6"/>
+
+  <!-- Simple ASCII/monospace label centered for legibility at favicon sizes -->
+  <g font-family="ui-monospace, 'Courier New', Courier, monospace" font-size="9" fill="#111111" text-anchor="middle">
+    <text x="32" y="18">MP4</text>
+    <text x="32" y="32">→ JPG</text>
+  </g>
+
+  <!-- Light border to improve contrast on some browser chrome -->
+  <rect x="0.5" y="0.5" width="63" height="63" fill="none" stroke="#e5e5e5" stroke-width="1" rx="6"/>
+</svg>
